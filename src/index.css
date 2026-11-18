@@ -1,0 +1,31 @@
+@import 'tailwindcss';
+@import '@toast-ui/editor/dist/toastui-editor.css';
+@import '@toast-ui/editor/dist/theme/toastui-editor-dark.css';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --accent: #1d4ed8;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+.dark body {
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+/* Kontras tab Toast UI (bawaan #969aa5 di atas #eaedf1 = 2.39:1, di bawah 4.5:1) */
+.toastui-editor-defaultUI .toastui-editor-tabs .tab-item { color: #334155; }
+.toastui-editor-defaultUI .toastui-editor-tabs .tab-item.active { color: #1e3a8a; font-weight: 600; }
+.toastui-editor-dark.toastui-editor-defaultUI .toastui-editor-tabs .tab-item { color: #cbd5e1; }
+.toastui-editor-dark.toastui-editor-defaultUI .toastui-editor-tabs .tab-item.active { color: #fff; }
+.toastui-editor-defaultUI .toastui-editor-mode-switch .tab-item { color: #334155; }
+.toastui-editor-defaultUI .toastui-editor-mode-switch .tab-item.active { color: #1e3a8a; font-weight: 600; }
+.toastui-editor-dark.toastui-editor-defaultUI .toastui-editor-mode-switch .tab-item { color: #cbd5e1; }
+.toastui-editor-dark.toastui-editor-defaultUI .toastui-editor-mode-switch .tab-item.active { color: #fff; }
