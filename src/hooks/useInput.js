@@ -1,9 +1,8 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 
-// Custom hook state input dua arah: [value, onChange, reset, setValue]
 export default function useInput(initial = '') {
   const [value, setValue] = useState(initial)
-  const onChange = (event) => setValue(event.target.value)
-  const reset = () => setValue(initial)
+  const onChange = useCallback((event) => setValue(event.target.value), [])
+  const reset = useCallback(() => setValue(initial), [initial])
   return [value, onChange, reset, setValue]
 }

@@ -1,16 +1,37 @@
-# React + Vite
+# Delcom Blog - Frontend (ReactJS + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Praktikum PABWE 2026 P9 - Studi Kasus. Frontend SPA multi-tier (Publik, Penulis, Admin) yang mengonsumsi
+backend `ifs24037-pabwe2026-sk-p9-be-golang-gin`.
 
-Currently, two official plugins are available:
+## Menjalankan (development)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev          # http://localhost:5174, proxy /api -> http://localhost:8081
+```
 
-## React Compiler
+## Pengujian (Vitest, threshold coverage 100%)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm test
+```
 
-## Expanding the Oxlint configuration
+## Build & Deploy (Vercel)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+URL backend sudah diatur di `.env.production` (`VITE_API_BASE_URL`), sehingga `npm run build` langsung memakainya. Untuk mengganti, ubah file tersebut atau set env var di Vercel:
+
+```bash
+npm run build        # hasil di dist/
+```
+
+`vercel.json` sudah berisi rewrite SPA sehingga refresh di `/author`, `/admin`, `/posts/:slug` tidak 404.
+
+## Rute
+
+| Path | Akses | Keterangan |
+| --- | --- | --- |
+| `/` atau `/public` | Publik | Galeri artikel, pencarian, filter kategori |
+| `/posts/:slug` | Publik | Detail artikel (Markdown) |
+| `/login`, `/register` | Publik | Form dengan `#login-username`, `#login-password`, `#login-submit` |
+| `/author` | Login | Workspace penulis (CRUD, toggle terbit, AI generator) |
+| `/admin` | Admin | Monitoring pengguna dan artikel |

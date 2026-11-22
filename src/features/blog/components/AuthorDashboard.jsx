@@ -1,173 +1,208 @@
-import { useCallback, useEffect, useState } from 'react'
-import { IconDotsVertical, IconEye, IconPencil, IconTrash } from '@tabler/icons-react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { IconDotsVertical, IconPlus, IconSparkles } from '@tabler/icons-react'
+import Link from '../../../components/Link'
+import usePageMeta from '../../../hooks/usePageMeta'
+import { confirmDelete, formatDate, showError, showSuccess } from '../../../helpers/toolsHelper'
+import { deletePost, fetchMyPosts, fetchStats, togglePublish } from '../api/blogApi'
 import PostStats from './PostStats'
-import PostModal from '../modals/PostModal'
-import AiPostGeneratorModal from '../modals/AiPostGeneratorModal'
-import {
-  createPost,
-  deletePost,
-  getPostStats,
-  listCategories,
-  listMyPosts,
-  togglePublish,
-  updatePost,
-} from '../api/blogApi'
-import { showConfirmDialog, showErrorAlert, showSuccessAlert } from '../../../helpers/toolsHelper'
 
-function KebabMenu({ post, onView, onEdit, onDelete }) {
-  const [open, setOpen] = useState(false)
-  const act = (fn) => () => {
-    setOpen(false)
-    fn(post)
-  }
-  const item = 'flex w-full items-center gap-2 px-3 py-2 hover:bg-slate-100'
-  return (
-    <div className="relative inline-block text-left">
-      <button
-        type="button"
-        aria-label={`Aksi untuk ${post.title}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        className="rounded p-1 hover:bg-slate-200"
-        onClick={() => setOpen(!open)}
-      >
-        <IconDotsVertical size={20} aria-hidden="true" />
-      </button>
-      {open && (
-        <div role="menu" className="absolute right-0 z-10 mt-1 w-40 rounded-md bg-white py-1 text-slate-900 shadow-lg ring-1 ring-slate-400">
-          <button role="menuitem" type="button" className={item} onClick={act(onView)}>
-            <IconEye size={16} aria-hidden="true" /> Lihat
-          </button>
-          <button role="menuitem" type="button" className={item} onClick={act(onEdit)}>
-            <IconPencil size={16} aria-hidden="true" /> Ubah
-          </button>
-          <button role="menuitem" type="button" className={`${item} text-red-800`} onClick={act(onDelete)}>
-            <IconTrash size={16} aria-hidden="true" /> Hapus
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
+const PostModal = lazy(() => import('../modals/PostModal'))
+const AiPostGeneratorModal = lazy(() => import('../modals/AiPostGeneratorModal'))
 
-// Ruang kerja penulis (full width)
-export default function AuthorDashboard({ navigate }) {
+const menuItemClass =
+  'block w-full px-4 py-2 text-left text-sm text-slate-900 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-700'
+
+export default function AuthorDashboard({ theme, onSessionExpired }) {
+  usePageMeta('Workspace Penulis | Delcom Blog', 'Kelola artikel Anda: tulis, terbitkan, dan buat draf dengan AI generator.')
   const [posts, setPosts] = useState([])
-  const [stats, setStats] = useState({ total: 0, total_terbit: 0, belum_selesai: 0 })
-  const [categories, setCategories] = useState([])
-  const [modal, setModal] = useState({ open: false, post: null })
-  const [aiOpen, setAiOpen] = useState(false)
+  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [modal, setModal] = useState(null)
+  const [openMenu, setOpenMenu] = useState(null)
 
-  const refresh = useCallback(async () => {
+  const load = useCallback(async () => {
     try {
-      const [p, s, c] = await Promise.all([listMyPosts(), getPostStats(), listCategories()])
-      setPosts(p)
-      setStats(s)
-      setCategories(c)
-    } catch (error) {
-      await showErrorAlert(error.message)
+      const [list, summary] = await Promise.all([fetchMyPosts(), fetchStats()])
+      setPosts(list)
+      setStats(summary)
+      setError('')
+    } catch (err) {
+      if (err.status === 401) {
+        onSessionExpired()
+        return
+      }
+      setError(err.message)
     }
-  }, [])
+    setLoading(false)
+  }, [onSessionExpired])
 
   useEffect(() => {
-    refresh()
-  }, [refresh])
+    load()
+  }, [load])
 
-  const run = async (action, message) => {
+  const fail = (err) => {
+    if (err.status === 401) {
+      onSessionExpired()
+      return
+    }
+    showError(err.message)
+  }
+
+  const handleToggle = async (post) => {
     try {
-      await action()
-      await showSuccessAlert(message)
-      await refresh()
-    } catch (error) {
-      await showErrorAlert(error.message)
+      await togglePublish(post.id)
+      await load()
+    } catch (err) {
+      fail(err)
     }
   }
 
-  const save = async (payload) => {
-    const { post } = modal
-    setModal({ open: false, post: null })
-    await run(() => (post?.id ? updatePost(post.id, payload) : createPost(payload)), 'Artikel tersimpan')
-  }
-
-  const remove = async (post) => {
-    if (await showConfirmDialog('Hapus artikel?', post.title)) {
-      await run(() => deletePost(post.id), 'Artikel dihapus')
+  const handleDelete = async (post) => {
+    setOpenMenu(null)
+    if (!(await confirmDelete(post.title))) return
+    try {
+      await deletePost(post.id)
+      showSuccess('Artikel berhasil dihapus')
+      await load()
+    } catch (err) {
+      fail(err)
     }
   }
 
-  const applyDraft = (draft) => {
-    setAiOpen(false)
-    setModal({
-      open: true,
-      post: { title: draft.title, category: draft.category, excerpt: draft.excerpt, content: draft.content },
-    })
+  const handleEdit = (post) => {
+    setOpenMenu(null)
+    setModal({ type: 'post', post })
+  }
+
+  const handleSaved = () => {
+    setModal(null)
+    showSuccess('Artikel berhasil disimpan')
+    load()
   }
 
   return (
-    <main className="w-full space-y-6 p-6">
-      <h1 className="text-2xl font-bold">Ruang Kerja Penulis</h1>
+    <div className="w-full px-4 py-8 sm:px-8 lg:px-12">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="m-0 text-3xl font-bold text-slate-900 dark:text-white">Workspace Penulis</h1>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setModal({ type: 'ai' })}
+            className="inline-flex items-center gap-2 rounded-lg bg-violet-800 px-4 py-2 font-semibold text-white"
+          >
+            <IconSparkles size={18} aria-hidden="true" /> AI Generator
+          </button>
+          <button
+            type="button"
+            onClick={() => setModal({ type: 'post' })}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-700 px-4 py-2 font-semibold text-white"
+          >
+            <IconPlus size={18} aria-hidden="true" /> Tambah Artikel
+          </button>
+        </div>
+      </div>
+
       <PostStats stats={stats} />
-      <div className="flex justify-end gap-2">
-        <button type="button" className="rounded-md bg-violet-800 px-4 py-2 font-semibold text-white" onClick={() => setAiOpen(true)}>
-          AI Generator
-        </button>
-        <button type="button" className="rounded-md bg-blue-700 px-4 py-2 font-semibold text-white" onClick={() => setModal({ open: true, post: null })}>
-          Tambah Artikel
-        </button>
-      </div>
-      <div className="overflow-x-auto rounded-xl bg-white text-slate-900 shadow">
-        <table className="w-full text-left text-sm">
-          <caption className="sr-only">Daftar artikel saya</caption>
-          <thead className="bg-blue-100">
-            <tr>
-              <th scope="col" className="px-4 py-3">Judul</th>
-              <th scope="col" className="px-4 py-3">Kategori</th>
-              <th scope="col" className="px-4 py-3">Terbit</th>
-              <th scope="col" className="px-4 py-3 text-right">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {posts.map((post) => (
-              <tr key={post.id} className="border-t border-slate-300">
-                <td className="px-4 py-3 font-medium">{post.title}</td>
-                <td className="px-4 py-3">{post.category}</td>
-                <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={post.is_published}
-                    aria-label={`Terbitkan ${post.title}`}
-                    onClick={() => run(() => togglePublish(post.id), 'Status publikasi diubah')}
-                    className={`relative h-6 w-11 rounded-full ${post.is_published ? 'bg-emerald-800' : 'bg-slate-600'}`}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${post.is_published ? 'left-5' : 'left-0.5'}`}
-                    />
-                  </button>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <KebabMenu
-                    post={post}
-                    onView={(p) => navigate(`/posts/${p.slug}`)}
-                    onEdit={(p) => setModal({ open: true, post: p })}
-                    onDelete={remove}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <PostModal
-        key={modal.post ? `${modal.post.id || 'draft'}-${modal.post.title}` : 'new'}
-        open={modal.open}
-        post={modal.post}
-        categories={categories}
-        onClose={() => setModal({ open: false, post: null })}
-        onSubmit={save}
-      />
-      <AiPostGeneratorModal open={aiOpen} categories={categories} onClose={() => setAiOpen(false)} onApply={applyDraft} />
-    </main>
+
+      <section aria-label="Daftar artikel saya" className="mt-8 min-h-screen">
+        {loading && <p role="status">Memuat artikel…</p>}
+        {!loading && error && (
+          <p role="alert" className="rounded-lg bg-red-100 p-4 text-red-900">
+            {error}
+          </p>
+        )}
+        {!loading && !error && posts.length === 0 && <p>Anda belum menulis artikel.</p>}
+        {!loading && !error && posts.length > 0 && (
+          <div className="overflow-x-auto md:overflow-visible">
+            <table className="w-full border-collapse text-left text-sm">
+              <caption className="sr-only">Daftar artikel milik Anda</caption>
+              <thead>
+                <tr className="border-b border-slate-300 dark:border-slate-600">
+                  <th scope="col" className="p-3">Judul</th>
+                  <th scope="col" className="p-3">Kategori</th>
+                  <th scope="col" className="p-3">Status</th>
+                  <th scope="col" className="p-3">Dibuat</th>
+                  <th scope="col" className="p-3">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {posts.map((post) => (
+                  <tr key={post.id} className="border-b border-slate-200 dark:border-slate-700">
+                    <td className="p-3 font-medium">{post.title}</td>
+                    <td className="p-3">{post.category}</td>
+                    <td className="p-3">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={post.is_published}
+                        aria-label={`${post.is_published ? 'Terbit' : 'Draf'}, ubah status ${post.title}`}
+                        onClick={() => handleToggle(post)}
+                        className={
+                          post.is_published
+                            ? 'rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900'
+                            : 'rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900'
+                        }
+                      >
+                        {post.is_published ? 'Terbit' : 'Draf'}
+                      </button>
+                    </td>
+                    <td className="p-3">{formatDate(post.created_at)}</td>
+                    <td className="relative p-3">
+                      <button
+                        type="button"
+                        aria-label={`Menu aksi ${post.title}`}
+                        aria-haspopup="menu"
+                        aria-expanded={openMenu === post.id}
+                        onClick={() => setOpenMenu(openMenu === post.id ? null : post.id)}
+                        className="rounded-md p-1 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      >
+                        <IconDotsVertical size={20} aria-hidden="true" />
+                      </button>
+                      {openMenu === post.id && (
+                        <div
+                          role="menu"
+                          className="absolute right-3 z-20 mt-1 w-40 rounded-lg border border-slate-300 bg-white py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800"
+                        >
+                          <button type="button" role="menuitem" className={menuItemClass} onClick={() => handleEdit(post)}>
+                            Edit
+                          </button>
+                          {post.is_published && (
+                            <Link to={`/posts/${post.slug}`} role="menuitem" className={menuItemClass}>
+                              Lihat
+                            </Link>
+                          )}
+                          <button type="button" role="menuitem" className={menuItemClass} onClick={() => handleDelete(post)}>
+                            Hapus
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <Suspense fallback={null}>
+        {modal && modal.type === 'post' && (
+          <PostModal
+            post={modal.post}
+            draft={modal.draft}
+            theme={theme}
+            onClose={() => setModal(null)}
+            onSaved={handleSaved}
+          />
+        )}
+        {modal && modal.type === 'ai' && (
+          <AiPostGeneratorModal
+            onClose={() => setModal(null)}
+            onApply={(draft) => setModal({ type: 'post', draft })}
+          />
+        )}
+      </Suspense>
+    </div>
   )
 }

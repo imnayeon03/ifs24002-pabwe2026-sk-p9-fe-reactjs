@@ -1,22 +1,29 @@
 import '@testing-library/jest-dom/vitest'
-import { afterEach, vi } from 'vitest'
-import { cleanup } from '@testing-library/react'
+import { afterEach, beforeEach, vi } from 'vitest'
 
-// Polyfill JSDOM yang dibutuhkan Toast UI Editor
-HTMLCanvasElement.prototype.getContext = () => null
-window.matchMedia =
-  window.matchMedia ||
-  (() => ({
-    matches: false,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  }))
-document.getSelection = document.getSelection || (() => ({ removeAllRanges() {}, addRange() {} }))
+vi.mock('@tabler/icons-react', async () => {
+  const { createElement } = await import('react')
+  const make = (name) => (props) => createElement('svg', { 'data-icon': name, ...props })
+  return {
+    IconDotsVertical: make('dots'),
+    IconMoon: make('moon'),
+    IconPlus: make('plus'),
+    IconSparkles: make('sparkles'),
+    IconSun: make('sun'),
+  }
+})
+
+vi.mock('sweetalert2', () => ({
+  default: { fire: vi.fn().mockResolvedValue({ isConfirmed: true }) },
+}))
+
+beforeEach(() => {
+  window.scrollTo = vi.fn()
+  window.history.replaceState({}, '', '/')
+})
 
 afterEach(() => {
-  cleanup()
   localStorage.clear()
-  vi.restoreAllMocks()
+  document.documentElement.classList.remove('dark')
+  vi.clearAllMocks()
 })

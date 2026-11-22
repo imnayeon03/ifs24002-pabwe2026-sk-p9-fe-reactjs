@@ -1,14 +1,14 @@
 import { useEffect, useRef } from 'react'
-import Editor from '@toast-ui/editor'
+import Viewer from '@toast-ui/editor/dist/toastui-editor-viewer'
+import '@toast-ui/editor/dist/toastui-editor-viewer.css'
 
-// Wrapper Toast UI Viewer untuk menampilkan Markdown secara aman
-export default function MarkdownViewer({ value = '' }) {
-  const rootRef = useRef(null)
+export default function MarkdownViewer({ content }) {
+  const elRef = useRef(null)
 
   useEffect(() => {
-    const viewer = Editor.factory({ el: rootRef.current, viewer: true, initialValue: value })
+    const viewer = new Viewer({ el: elRef.current, initialValue: content })
     return () => viewer.destroy()
-  }, [value])
+  }, [content])
 
-  return <div ref={rootRef} data-testid="markdown-viewer" />
+  return <div ref={elRef} className="rounded-xl bg-white p-4 text-slate-900 sm:p-8" data-testid="markdown-viewer" />
 }

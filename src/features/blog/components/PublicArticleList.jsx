@@ -1,74 +1,112 @@
 import { useEffect, useState } from 'react'
-import { listCategories, listPublicPosts } from '../api/blogApi'
-import { formatDate, showErrorAlert } from '../../../helpers/toolsHelper'
+import Link from '../../../components/Link'
+import usePageMeta from '../../../hooks/usePageMeta'
+import { formatDate } from '../../../helpers/toolsHelper'
+import { fetchPublicPosts } from '../api/blogApi'
+import { CATEGORIES } from '../constants'
 
-// Galeri artikel publik: pencarian real-time + filter kategori berbentuk pill
-export default function PublicArticleList({ navigate }) {
+const ALL = 'Semua'
+const FILTERS = [ALL, ...CATEGORIES]
+
+export default function PublicArticleList() {
+  usePageMeta('Delcom Blog - Artikel Teknologi, Pendidikan, dan Lainnya', 'Baca artikel terbaru di Delcom Blog. Cari berdasarkan kata kunci atau filter kategori.')
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState(ALL)
   const [posts, setPosts] = useState([])
-  const [categories, setCategories] = useState([])
-  const [q, setQ] = useState('')
-  const [category, setCategory] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    listCategories().then(setCategories).catch((e) => showErrorAlert(e.message))
-  }, [])
-
-  useEffect(() => {
-    listPublicPosts(q, category).then(setPosts).catch((e) => showErrorAlert(e.message))
-  }, [q, category])
-
-  const pill = (value, label) => (
-    <button
-      key={value}
-      type="button"
-      aria-pressed={category === value}
-      onClick={() => setCategory(value)}
-      className={`rounded-full px-4 py-1 text-sm font-medium ${
-        category === value ? 'bg-blue-700 text-white' : 'bg-white text-slate-900 ring-1 ring-slate-500'
-      }`}
-    >
-      {label}
-    </button>
-  )
+    let active = true
+    async function run() {
+      setLoading(true)
+      let result = []
+      let message = ''
+      try {
+        result = await fetchPublicPosts({ q: query, category: category === ALL ? '' : category })
+      } catch (err) {
+        message = err.message
+      }
+      if (!active) return
+      setPosts(result)
+      setError(message)
+      setLoading(false)
+    }
+    run()
+    return () => {
+      active = false
+    }
+  }, [query, category])
 
   return (
-    <main className="w-full p-6">
-      <h1 className="mb-4 text-2xl font-bold">Artikel Terbaru</h1>
-      <label htmlFor="search" className="block text-sm font-medium">Cari artikel</label>
-      <input
-        id="search"
-        type="search"
-        value={q}
-        onChange={(event) => setQ(event.target.value)}
-        className="mb-4 mt-1 w-full max-w-md rounded-md border border-slate-500 bg-white px-3 py-2 text-slate-900"
-      />
-      <div role="group" aria-label="Filter kategori" className="mb-6 flex flex-wrap gap-2">
-        {pill('', 'Semua')}
-        {categories.map((c) => pill(c, c))}
-      </div>
-      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {posts.map((post) => (
-          <li key={post.id} className="rounded-xl bg-white p-5 text-slate-900 shadow">
-            <p className="text-xs font-semibold uppercase text-blue-800">{post.category}</p>
-            <h2 className="text-lg font-semibold">
-              <a
-                href={`/posts/${post.slug}`}
-                className="text-slate-900 underline"
-                onClick={(event) => {
-                  event.preventDefault()
-                  navigate(`/posts/${post.slug}`)
-                }}
+    <div className="mx-auto w-full max-w-7xl px-4 py-8">
+      <section className="mb-8">
+        <h1 className="m-0 text-3xl font-bold text-slate-900 dark:text-white">Delcom Blog</h1>
+        <p className="mt-2 text-slate-700 dark:text-slate-300">Temukan artikel terbaru dari para penulis kami.</p>
+        <div className="mt-6">
+          <label htmlFor="search-input" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
+            Cari artikel
+          </label>
+          <input
+            id="search-input"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Ketik kata kunci…"
+            className="w-full rounded-lg border border-slate-400 bg-white px-3 py-2 text-slate-900 dark:border-slate-500 dark:bg-slate-800 dark:text-white"
+          />
+        </div>
+        <div role="group" aria-label="Filter kategori" className="mt-4 flex flex-wrap gap-2">
+          {FILTERS.map((name) => (
+            <button
+              key={name}
+              type="button"
+              aria-pressed={category === name}
+              onClick={() => setCategory(name)}
+              className={
+                category === name
+                  ? 'rounded-full bg-indigo-700 px-4 py-1.5 text-sm font-medium text-white'
+                  : 'rounded-full border border-slate-400 bg-white px-4 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-100 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100'
+              }
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section aria-label="Daftar artikel" className="min-h-[24rem]">
+        {loading && <p role="status">Memuat artikel…</p>}
+        {!loading && error && (
+          <p role="alert" className="rounded-lg bg-red-100 p-4 text-red-900">
+            {error}
+          </p>
+        )}
+        {!loading && !error && posts.length === 0 && <p>Belum ada artikel yang cocok.</p>}
+        {!loading && !error && posts.length > 0 && (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {posts.map((post) => (
+              <article
+                key={post.id}
+                className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800"
               >
-                {post.title}
-              </a>
-            </h2>
-            <p className="my-2 text-sm">{post.excerpt}</p>
-            <p className="text-xs text-slate-800">
-              {formatDate(post.published_at)} &middot; {post.reading_time} menit baca
-            </p>
-          </li>
-        ))}
-      </ul>
-    </main>
+                <span className="mb-2 w-fit rounded-full bg-indigo-100 px-3 py-0.5 text-xs font-semibold text-indigo-900">
+                  {post.category}
+                </span>
+                <h2 className="m-0 text-xl font-semibold">
+                  <Link to={`/posts/${post.slug}`} className="text-slate-900 hover:underline dark:text-white">
+                    {post.title}
+                  </Link>
+                </h2>
+                <p className="mt-2 flex-1 text-slate-700 dark:text-slate-300">{post.excerpt}</p>
+                <p className="m-0 mt-4 text-sm text-slate-600 dark:text-slate-300">
+                  {post.author_name} · {formatDate(post.published_at)} · {post.reading_time} menit baca
+                </p>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
   )
 }

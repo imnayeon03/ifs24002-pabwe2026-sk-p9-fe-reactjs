@@ -1,20 +1,59 @@
-import { useState } from 'react'
-import useInput from '../../../hooks/useInput'
+import { useEffect, useState } from 'react'
 import MarkdownEditor from '../../../components/MarkdownEditor'
+import useInput from '../../../hooks/useInput'
+import { CATEGORIES } from '../constants'
+import { createPost, updatePost } from '../api/blogApi'
 
-const field = 'mt-1 block w-full rounded-md border border-slate-500 bg-white px-3 py-2 text-slate-900'
+const inputClass =
+  'w-full rounded-lg border border-slate-400 bg-white px-3 py-2 text-slate-900 dark:border-slate-500 dark:bg-slate-800 dark:text-white'
+const labelClass = 'mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200'
 
-// Modal penulisan artikel layar penuh dengan header & footer berwarna kontras
-export default function PostModal({ open, post, categories, onClose, onSubmit }) {
-  const [title, onTitle] = useInput(post?.title || '')
-  const [category, onCategory] = useInput(post?.category || 'Umum')
-  const [excerpt, onExcerpt] = useInput(post?.excerpt || '')
-  const [content, setContent] = useState(post?.content || '')
-  if (!open) return null
+export default function PostModal({ post, draft, theme, onClose, onSaved }) {
+  const initial = post || draft || {}
+  const [title, onTitle] = useInput(initial.title || '')
+  const [category, onCategory] = useInput(initial.category || 'Umum')
+  const [excerpt, onExcerpt] = useInput(initial.excerpt || '')
+  const [cover, onCover] = useInput(initial.cover_image_path || '')
+  const [content, setContent] = useState(initial.content || '')
+  const [published, setPublished] = useState(Boolean(initial.is_published))
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  const submit = (event) => {
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    onSubmit({ title, category, excerpt, content })
+    if (!title.trim() || !content.trim()) {
+      setError('Judul dan konten artikel wajib diisi')
+      return
+    }
+    setError('')
+    setSaving(true)
+    const payload = {
+      title: title.trim(),
+      category,
+      excerpt,
+      content,
+      cover_image_path: cover.trim(),
+      is_published: published,
+    }
+    try {
+      if (post) {
+        await updatePost(post.id, payload)
+      } else {
+        await createPost(payload)
+      }
+      onSaved()
+    } catch (err) {
+      setError(err.message)
+      setSaving(false)
+    }
   }
 
   return (
@@ -23,41 +62,74 @@ export default function PostModal({ open, post, categories, onClose, onSubmit })
         role="dialog"
         aria-modal="true"
         aria-labelledby="post-modal-title"
-        className="h-[96vh] w-full max-w-[96vw] overflow-hidden rounded-xl bg-white text-slate-900"
+        className="flex max-h-[96vh] w-full max-w-[96vw] flex-col overflow-hidden rounded-xl bg-white dark:bg-slate-800"
       >
-        <form onSubmit={submit} className="flex h-full flex-col">
-          <header className="bg-blue-700 px-6 py-4 text-white">
-            <h2 id="post-modal-title" className="text-xl font-bold">{post?.id ? 'Ubah Artikel' : 'Tambah Artikel'}</h2>
-          </header>
+        <header className="bg-indigo-700 px-6 py-4 text-white">
+          <h2 id="post-modal-title" className="m-0 text-xl font-semibold">
+            {post ? 'Edit Artikel' : 'Tambah Artikel'}
+          </h2>
+        </header>
+        <form onSubmit={handleSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
           <div className="flex-1 space-y-4 overflow-y-auto p-6">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="sm:col-span-2">
-                <label htmlFor="post-title" className="text-sm font-medium">Judul</label>
-                <input id="post-title" className={field} value={title} onChange={onTitle} required />
-              </div>
+            <div>
+              <label htmlFor="post-title" className={labelClass}>
+                Judul
+              </label>
+              <input id="post-title" value={title} onChange={onTitle} className={inputClass} />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label htmlFor="post-category" className="text-sm font-medium">Kategori</label>
-                <select id="post-category" className={field} value={category} onChange={onCategory}>
-                  {categories.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                <label htmlFor="post-category" className={labelClass}>
+                  Kategori
+                </label>
+                <select id="post-category" value={category} onChange={onCategory} className={inputClass}>
+                  {CATEGORIES.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
                   ))}
                 </select>
               </div>
+              <div>
+                <label htmlFor="post-cover" className={labelClass}>
+                  URL gambar sampul
+                </label>
+                <input id="post-cover" value={cover} onChange={onCover} className={inputClass} />
+              </div>
             </div>
             <div>
-              <label htmlFor="post-excerpt" className="text-sm font-medium">Ringkasan</label>
-              <textarea id="post-excerpt" rows={2} className={field} value={excerpt} onChange={onExcerpt} />
+              <label htmlFor="post-excerpt" className={labelClass}>
+                Ringkasan
+              </label>
+              <textarea id="post-excerpt" rows={2} value={excerpt} onChange={onExcerpt} className={inputClass} />
             </div>
             <div>
-              <p className="text-sm font-medium">Isi artikel (Markdown)</p>
-              <MarkdownEditor value={content} onChange={setContent} label="Editor isi artikel" />
+              <p className={labelClass}>Konten (Markdown)</p>
+              <MarkdownEditor value={content} onChange={setContent} theme={theme} />
             </div>
+            <label className="flex items-center gap-2 text-sm text-slate-800 dark:text-slate-200">
+              <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
+              Terbitkan artikel
+            </label>
+            {error && (
+              <p role="alert" className="m-0 rounded-lg bg-red-100 p-3 text-sm text-red-900">
+                {error}
+              </p>
+            )}
           </div>
-          <footer className="flex justify-end gap-2 bg-slate-200 px-6 py-3">
-            <button type="button" className="rounded-md bg-white px-4 py-2 font-medium text-slate-900 ring-1 ring-slate-500" onClick={onClose}>
+          <footer className="flex justify-end gap-3 bg-slate-200 px-6 py-4 dark:bg-slate-700">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-slate-500 bg-white px-4 py-2 font-medium text-slate-900"
+            >
               Batal
             </button>
-            <button type="submit" className="rounded-md bg-blue-700 px-4 py-2 font-semibold text-white">
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-lg bg-indigo-700 px-4 py-2 font-semibold text-white disabled:opacity-60"
+            >
               Simpan
             </button>
           </footer>

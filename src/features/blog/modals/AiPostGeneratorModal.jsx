@@ -1,26 +1,43 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import MarkdownViewer from '../../../components/MarkdownViewer'
 import useInput from '../../../hooks/useInput'
-import { aiGeneratePost } from '../api/blogApi'
-import { showErrorAlert } from '../../../helpers/toolsHelper'
+import { CATEGORIES } from '../constants'
+import { generateDraft } from '../api/blogApi'
 
-// Modal layar penuh AI Blog Generator, dengan opsi penelusuran Search Engine
-export default function AiPostGeneratorModal({ open, categories, onClose, onApply }) {
-  const [topic, onTopic] = useInput('')
+const inputClass =
+  'w-full rounded-lg border border-slate-400 bg-white px-3 py-2 text-slate-900 dark:border-slate-500 dark:bg-slate-800 dark:text-white'
+const labelClass = 'mb-1 block text-sm font-medium text-slate-800 dark:text-slate-200'
+
+export default function AiPostGeneratorModal({ onClose, onApply }) {
+  const [topic, onTopic] = useInput()
   const [category, onCategory] = useInput('Umum')
-  const [useSearch, setUseSearch] = useState(true)
+  const [withSearch, setWithSearch] = useState(true)
   const [draft, setDraft] = useState(null)
+  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  if (!open) return null
 
-  const generate = async () => {
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const handleGenerate = async (event) => {
+    event.preventDefault()
+    if (!topic.trim()) {
+      setError('Topik wajib diisi')
+      return
+    }
+    setError('')
     setLoading(true)
     try {
-      setDraft(await aiGeneratePost(topic, category, useSearch))
-    } catch (error) {
-      await showErrorAlert(error.message)
-    } finally {
-      setLoading(false)
+      setDraft(await generateDraft({ topic: topic.trim(), category, include_web_search: withSearch }))
+    } catch (err) {
+      setError(err.message)
     }
+    setLoading(false)
   }
 
   return (
@@ -28,65 +45,99 @@ export default function AiPostGeneratorModal({ open, categories, onClose, onAppl
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="ai-post-title"
-        className="flex h-[96vh] w-full max-w-[96vw] flex-col overflow-hidden rounded-xl bg-white text-slate-900"
+        aria-labelledby="ai-modal-title"
+        className="flex max-h-[96vh] w-full max-w-[96vw] flex-col overflow-hidden rounded-xl bg-white dark:bg-slate-800"
       >
         <header className="bg-violet-800 px-6 py-4 text-white">
-          <h2 id="ai-post-title" className="text-xl font-bold">AI Blog Generator</h2>
+          <h2 id="ai-modal-title" className="m-0 text-xl font-semibold">
+            AI Blog Generator
+          </h2>
         </header>
+        <form onSubmit={handleGenerate} noValidate className="flex min-h-0 flex-1 flex-col">
         <div className="flex-1 space-y-4 overflow-y-auto p-6">
-          <div>
-            <label htmlFor="ai-topic" className="text-sm font-medium">Topik artikel</label>
-            <input id="ai-topic" value={topic} onChange={onTopic} className="mt-1 block w-full rounded-md border border-slate-500 bg-white px-3 py-2" />
-          </div>
-          <div>
-            <label htmlFor="ai-category" className="text-sm font-medium">Kategori</label>
-            <select id="ai-category" value={category} onChange={onCategory} className="mt-1 block rounded-md border border-slate-500 bg-white px-3 py-2">
-              {categories.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <input id="ai-search" type="checkbox" checked={useSearch} onChange={(event) => setUseSearch(event.target.checked)} />
-            <label htmlFor="ai-search" className="text-sm">Sertakan penelusuran Search Engine</label>
-          </div>
-          <button
-            type="button"
-            disabled={loading || !topic.trim()}
-            onClick={generate}
-            className="rounded-md bg-violet-800 px-4 py-2 font-semibold text-white disabled:opacity-60"
-          >
-            {loading ? 'Memproses...' : 'Hasilkan Artikel'}
-          </button>
-          {draft && (
-            <section aria-label="Pratinjau draf" className="space-y-2 rounded-lg border border-slate-400 p-4">
-              <h3 className="text-lg font-bold">{draft.title}</h3>
-              <p>{draft.excerpt}</p>
-              <h4 className="font-semibold">Sumber Rujukan Mesin Pencari</h4>
-              <ul className="list-disc pl-6">
-                {(draft.sources || []).map((s) => (
-                  <li key={s.url}>
-                    <a href={s.url} className="text-blue-800 underline">{s.title}</a>
-                  </li>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="ai-topic" className={labelClass}>
+                Topik artikel
+              </label>
+              <input id="ai-topic" value={topic} onChange={onTopic} className={inputClass} />
+            </div>
+            <div>
+              <label htmlFor="ai-category" className={labelClass}>
+                Kategori
+              </label>
+              <select id="ai-category" value={category} onChange={onCategory} className={inputClass}>
+                {CATEGORIES.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
                 ))}
-              </ul>
+              </select>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-slate-800 dark:text-slate-200">
+              <input type="checkbox" checked={withSearch} onChange={(e) => setWithSearch(e.target.checked)} />
+              Sertakan penelusuran search engine
+            </label>
+          </div>
+          {error && (
+            <p role="alert" className="m-0 rounded-lg bg-red-100 p-3 text-sm text-red-900">
+              {error}
+            </p>
+          )}
+          {loading && <p role="status">Membuat draf artikel…</p>}
+          {draft && (
+            <section aria-label="Pratinjau draf" className="space-y-3">
+              <h3 className="m-0 text-lg font-semibold text-slate-900 dark:text-white">{draft.title}</h3>
+              <p className="m-0 text-sm text-slate-700 dark:text-slate-300">{draft.excerpt}</p>
+              <MarkdownViewer content={draft.content} />
+              {draft.sources && draft.sources.length > 0 && (
+                <div>
+                  <h4 className="mb-1 mt-0 font-semibold text-slate-900 dark:text-white">Sumber rujukan</h4>
+                  <ul className="m-0 list-disc pl-5">
+                    {draft.sources.map((source) => (
+                      <li key={source.url}>
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-indigo-700 underline dark:text-indigo-300"
+                        >
+                          {source.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </section>
           )}
         </div>
-        <footer className="flex justify-end gap-2 bg-slate-200 px-6 py-3">
-          <button type="button" className="rounded-md bg-white px-4 py-2 font-medium ring-1 ring-slate-500" onClick={onClose}>
-            Batal
-          </button>
+        <footer className="flex justify-end gap-3 bg-violet-100 px-6 py-4 dark:bg-slate-700">
           <button
             type="button"
-            disabled={!draft}
-            className="rounded-md bg-blue-700 px-4 py-2 font-semibold text-white disabled:opacity-60"
-            onClick={() => onApply(draft)}
+            onClick={onClose}
+            className="rounded-lg border border-slate-500 bg-white px-4 py-2 font-medium text-slate-900"
           >
-            Terapkan ke Editor
+            Batal
+          </button>
+          {draft && (
+            <button
+              type="button"
+              onClick={() => onApply(draft)}
+              className="rounded-lg bg-emerald-800 px-4 py-2 font-semibold text-white"
+            >
+              Terapkan ke Editor
+            </button>
+          )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-lg bg-violet-800 px-4 py-2 font-semibold text-white disabled:opacity-60"
+          >
+            Generate Draf
           </button>
         </footer>
+        </form>
       </div>
     </div>
   )

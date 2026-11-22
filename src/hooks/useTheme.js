@@ -1,22 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
-const ACCENTS = { biru: '#1d4ed8', hijau: '#047857', ungu: '#6d28d9' }
+const THEME_KEY = 'delcom_blog_theme'
 
-// Hook tema light/dark serta pilihan aksen warna
 export default function useTheme() {
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
-  const [accent, setAccent] = useState(() => localStorage.getItem('accent') || 'biru')
+  const [theme, setTheme] = useState(() => (localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'))
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
-    localStorage.setItem('theme', theme)
+    localStorage.setItem(THEME_KEY, theme)
   }, [theme])
 
-  useEffect(() => {
-    document.documentElement.style.setProperty('--accent', ACCENTS[accent])
-    localStorage.setItem('accent', accent)
-  }, [accent])
-
-  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
-  return { theme, toggleTheme, accent, setAccent, accents: Object.keys(ACCENTS) }
+  const toggleTheme = useCallback(() => setTheme((t) => (t === 'dark' ? 'light' : 'dark')), [])
+  return { theme, toggleTheme }
 }

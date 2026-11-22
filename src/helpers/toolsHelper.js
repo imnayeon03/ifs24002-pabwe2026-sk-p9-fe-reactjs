@@ -1,23 +1,23 @@
-import Swal from 'sweetalert2'
+// SweetAlert2 dimuat saat dibutuhkan agar tidak membebani bundle awal (halaman publik)
+const loadSwal = async () => (await import('sweetalert2')).default
 
-export const formatDate = (value) => {
-  if (!value) return '-'
-  return new Date(value).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-}
+export const showSuccess = async (text) =>
+  (await loadSwal()).fire({ icon: 'success', title: 'Berhasil', text, timer: 1800, showConfirmButton: false })
 
-export const showSuccessAlert = (message) =>
-  Swal.fire({ icon: 'success', title: 'Berhasil', text: message, timer: 1800, showConfirmButton: false })
+export const showError = async (text) => (await loadSwal()).fire({ icon: 'error', title: 'Gagal', text })
 
-export const showErrorAlert = (message) => Swal.fire({ icon: 'error', title: 'Gagal', text: message })
-
-export const showConfirmDialog = async (title, text) => {
+export const confirmDelete = async (title) => {
+  const Swal = await loadSwal()
   const result = await Swal.fire({
     icon: 'warning',
-    title,
-    text,
+    title: 'Hapus artikel?',
+    text: `Artikel "${title}" akan dihapus permanen.`,
     showCancelButton: true,
-    confirmButtonText: 'Ya, lanjutkan',
+    confirmButtonText: 'Hapus',
     cancelButtonText: 'Batal',
   })
   return result.isConfirmed
 }
+
+export const formatDate = (iso) =>
+  iso ? new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'
