@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url' // BARU
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -42,7 +43,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: './src/setupTests.js',
+    setupFiles: [fileURLToPath(new URL('./src/setupTests.js', import.meta.url))], // DIUBAH
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
