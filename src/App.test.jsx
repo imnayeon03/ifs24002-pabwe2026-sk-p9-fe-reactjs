@@ -1,39 +1,44 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createElement as h } from 'react'
 import { vi } from 'vitest'
 import App from './App'
 import { logout } from './features/auth/api/authApi'
+import AdminDashboard from './features/admin/components/AdminDashboard'
+import AuthPage from './features/auth/components/AuthPage'
+import AuthorDashboard from './features/blog/components/AuthorDashboard'
+import PublicArticleDetail from './features/blog/components/PublicArticleDetail'
+import PublicArticleList from './features/blog/components/PublicArticleList'
 import { saveSession } from './helpers/sessionHelper'
 
-vi.mock('./features/auth/api/authApi', () => ({ logout: vi.fn() }))
-vi.mock('./features/blog/components/PublicArticleList', () => ({
-  default: () => h('div', null, 'HALAMAN-LIST'),
-}))
-vi.mock('./features/blog/components/PublicArticleDetail', () => ({
-  default: ({ slug }) => h('div', null, `HALAMAN-DETAIL:${slug}`),
-}))
-vi.mock('./features/auth/components/AuthPage', () => ({
-  default: ({ mode, onSuccess }) =>
-    h(
-      'div',
-      null,
-      h('span', null, `HALAMAN-AUTH:${mode}`),
-      h('button', { onClick: () => onSuccess({ token: 'tok', user: { id: 1, role: 'member' } }) }, 'login-sukses'),
-      h('button', { onClick: () => onSuccess({ token: 'tok', user: { id: 2, role: 'admin' } }) }, 'login-admin'),
-    ),
-}))
-vi.mock('./features/blog/components/AuthorDashboard', () => ({
-  default: ({ onSessionExpired }) =>
-    h('div', null, h('span', null, 'HALAMAN-AUTHOR'), h('button', { onClick: onSessionExpired }, 'sesi-habis')),
-}))
-vi.mock('./features/admin/components/AdminDashboard', () => ({
-  default: () => h('div', null, 'HALAMAN-ADMIN'),
-}))
+vi.mock('./features/auth/api/authApi')
+vi.mock('./features/blog/components/PublicArticleList')
+vi.mock('./features/blog/components/PublicArticleDetail')
+vi.mock('./features/auth/components/AuthPage')
+vi.mock('./features/blog/components/AuthorDashboard')
+vi.mock('./features/admin/components/AdminDashboard')
 
 const member = { id: 1, username: 'andi', role: 'member' }
 const admin = { id: 2, username: 'admin', role: 'admin' }
 const visit = (path) => window.history.pushState({}, '', path)
+
+beforeEach(() => {
+  vi.mocked(PublicArticleList).mockImplementation(() => <div>HALAMAN-LIST</div>)
+  vi.mocked(PublicArticleDetail).mockImplementation(({ slug }) => <div>HALAMAN-DETAIL:{slug}</div>)
+  vi.mocked(AuthPage).mockImplementation(({ mode, onSuccess }) => (
+    <div>
+      <span>HALAMAN-AUTH:{mode}</span>
+      <button onClick={() => onSuccess({ token: 'tok', user: { id: 1, role: 'member' } })}>login-sukses</button>
+      <button onClick={() => onSuccess({ token: 'tok', user: { id: 2, role: 'admin' } })}>login-admin</button>
+    </div>
+  ))
+  vi.mocked(AuthorDashboard).mockImplementation(({ onSessionExpired }) => (
+    <div>
+      <span>HALAMAN-AUTHOR</span>
+      <button onClick={onSessionExpired}>sesi-habis</button>
+    </div>
+  ))
+  vi.mocked(AdminDashboard).mockImplementation(() => <div>HALAMAN-ADMIN</div>)
+})
 
 describe('App routing', () => {
   it('menampilkan beranda, skip link, dan footer', () => {
