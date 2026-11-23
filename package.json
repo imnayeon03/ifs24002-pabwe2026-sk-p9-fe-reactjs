@@ -1,5 +1,5 @@
 {
-  "name": "ifs24037-pabwe2026-sk-p9-fe-reactjs",
+  "name": "ifs24002-pabwe2026-sk-p9-fe-reactjs",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --port 5174",
+    "start": "vite preview --host 0.0.0.0 --port 5174",
     "test": "vitest run --coverage",
     "test:watch": "vitest"
   },
