@@ -11,32 +11,26 @@ vi.mock('../api/blogApi', () => ({
   togglePublish: vi.fn(),
   deletePost: vi.fn(),
 }))
-vi.mock('../modals/PostModal', async () => {
-  const { createElement: h } = await import('react')
-  return {
-    default: (props) =>
-      h(
-        'div',
-        { 'data-testid': 'post-modal' },
-        h('span', null, `post:${props.post ? props.post.title : 'baru'}`),
-        h('span', null, `draft:${props.draft ? props.draft.title : 'kosong'}`),
-        h('button', { onClick: props.onClose }, 'tutup-post'),
-        h('button', { onClick: props.onSaved }, 'simpan-post'),
-      ),
-  }
-})
-vi.mock('../modals/AiPostGeneratorModal', async () => {
-  const { createElement: h } = await import('react')
-  return {
-    default: (props) =>
-      h(
-        'div',
-        { 'data-testid': 'ai-modal' },
-        h('button', { onClick: props.onClose }, 'tutup-ai'),
-        h('button', { onClick: () => props.onApply({ title: 'Draf AI' }) }, 'terapkan-ai'),
-      ),
-  }
-})
+vi.mock('../modals/PostModal', () => ({
+  default: (props) =>
+    globalThis.h(
+      'div',
+      { 'data-testid': 'post-modal' },
+      globalThis.h('span', null, `post:${props.post ? props.post.title : 'baru'}`),
+      globalThis.h('span', null, `draft:${props.draft ? props.draft.title : 'kosong'}`),
+      globalThis.h('button', { onClick: props.onClose }, 'tutup-post'),
+      globalThis.h('button', { onClick: props.onSaved }, 'simpan-post'),
+    ),
+}))
+vi.mock('../modals/AiPostGeneratorModal', () => ({
+  default: (props) =>
+    globalThis.h(
+      'div',
+      { 'data-testid': 'ai-modal' },
+      globalThis.h('button', { onClick: props.onClose }, 'tutup-ai'),
+      globalThis.h('button', { onClick: () => props.onApply({ title: 'Draf AI' }) }, 'terapkan-ai'),
+    ),
+}))
 
 const posts = [
   { id: 1, title: 'Artikel Terbit', slug: 'artikel-terbit', category: 'Teknologi', is_published: true, created_at: '2026-11-01T12:00:00Z' },

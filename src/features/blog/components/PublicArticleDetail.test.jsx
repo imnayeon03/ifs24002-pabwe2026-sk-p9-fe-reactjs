@@ -4,10 +4,9 @@ import { fetchPublicPost } from '../api/blogApi'
 import PublicArticleDetail from './PublicArticleDetail'
 
 vi.mock('../api/blogApi', () => ({ fetchPublicPost: vi.fn() }))
-vi.mock('../../../components/MarkdownViewer', async () => {
-  const { createElement } = await import('react')
-  return { default: ({ content }) => createElement('div', { 'data-testid': 'viewer' }, content) }
-})
+vi.mock('../../../components/MarkdownViewer', () => ({
+  default: ({ content }) => globalThis.h('div', { 'data-testid': 'viewer' }, content),
+}))
 
 const post = {
   title: 'Belajar Go',

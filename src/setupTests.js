@@ -1,9 +1,12 @@
 import '@testing-library/jest-dom/vitest'
+import React from 'react'
 import { afterEach, beforeEach, vi } from 'vitest'
 
-vi.mock('@tabler/icons-react', async () => {
-  const { createElement } = await import('react')
-  const make = (name) => (props) => createElement('svg', { 'data-icon': name, ...props })
+globalThis.React = React
+globalThis.h = React.createElement
+
+vi.mock('@tabler/icons-react', () => {
+  const make = (name) => (props) => globalThis.h('svg', { 'data-icon': name, ...props })
   return {
     IconDotsVertical: make('dots'),
     IconMoon: make('moon'),
