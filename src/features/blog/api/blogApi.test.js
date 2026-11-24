@@ -12,7 +12,8 @@ import {
   updatePost,
 } from './blogApi'
 
-vi.mock('../../../helpers/apiHelper', () => ({ apiData: vi.fn(), apiList: vi.fn() }))
+const { _apiData, _apiList } = vi.hoisted(() => ({ _apiData: vi.fn(), _apiList: vi.fn() }))
+vi.mock('../../../helpers/apiHelper', () => ({ apiData: _apiData, apiList: _apiList }))
 
 describe('blogApi', () => {
   it('fetchPublicPosts membangun query string', () => {

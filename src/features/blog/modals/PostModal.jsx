@@ -12,6 +12,7 @@ export default function PostModal({ post, draft, theme, onClose, onSaved }) {
   const initial = post || draft || {}
   const [title, onTitle] = useInput(initial.title || '')
   const [category, onCategory] = useInput(initial.category || 'Umum')
+  const categoryOptions = CATEGORIES.includes(category) ? CATEGORIES : [...CATEGORIES, category]
   const [excerpt, onExcerpt] = useInput(initial.excerpt || '')
   const [cover, onCover] = useInput(initial.cover_image_path || '')
   const [content, setContent] = useState(initial.content || '')
@@ -44,12 +45,13 @@ export default function PostModal({ post, draft, theme, onClose, onSaved }) {
       is_published: published,
     }
     try {
+      let result
       if (post) {
-        await updatePost(post.id, payload)
+        result = await updatePost(post.id, payload)
       } else {
-        await createPost(payload)
+        result = await createPost(payload)
       }
-      onSaved()
+      onSaved(result)
     } catch (err) {
       setError(err.message)
       setSaving(false)
@@ -64,16 +66,24 @@ export default function PostModal({ post, draft, theme, onClose, onSaved }) {
         aria-labelledby="post-modal-title"
         className="flex max-h-[96vh] w-full max-w-[96vw] flex-col overflow-hidden rounded-xl bg-white dark:bg-slate-800"
       >
-        <header className="bg-indigo-700 px-6 py-4 text-white">
+        <header className="flex items-center justify-between bg-indigo-700 px-6 py-4 text-white">
           <h2 id="post-modal-title" className="m-0 text-xl font-semibold">
             {post ? 'Edit Artikel' : 'Tambah Artikel'}
           </h2>
+          <button
+            type="button"
+            aria-label="Tutup dialog"
+            onClick={onClose}
+            className="text-2xl leading-none text-white hover:text-slate-200"
+          >
+            ×
+          </button>
         </header>
         <form onSubmit={handleSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
           <div className="flex-1 space-y-4 overflow-y-auto p-6">
             <div>
               <label htmlFor="post-title" className={labelClass}>
-                Judul
+                Judul Artikel
               </label>
               <input id="post-title" value={title} onChange={onTitle} className={inputClass} />
             </div>
@@ -83,7 +93,7 @@ export default function PostModal({ post, draft, theme, onClose, onSaved }) {
                   Kategori
                 </label>
                 <select id="post-category" value={category} onChange={onCategory} className={inputClass}>
-                  {CATEGORIES.map((name) => (
+                  {categoryOptions.map((name) => (
                     <option key={name} value={name}>
                       {name}
                     </option>
@@ -92,14 +102,14 @@ export default function PostModal({ post, draft, theme, onClose, onSaved }) {
               </div>
               <div>
                 <label htmlFor="post-cover" className={labelClass}>
-                  URL gambar sampul
+                  URL Gambar Sampul
                 </label>
                 <input id="post-cover" value={cover} onChange={onCover} className={inputClass} />
               </div>
             </div>
             <div>
               <label htmlFor="post-excerpt" className={labelClass}>
-                Ringkasan
+                Ringkasan Singkat
               </label>
               <textarea id="post-excerpt" rows={2} value={excerpt} onChange={onExcerpt} className={inputClass} />
             </div>
@@ -109,7 +119,7 @@ export default function PostModal({ post, draft, theme, onClose, onSaved }) {
             </div>
             <label className="flex items-center gap-2 text-sm text-slate-800 dark:text-slate-200">
               <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
-              Terbitkan artikel
+              Terbitkan langsung
             </label>
             {error && (
               <p role="alert" className="m-0 rounded-lg bg-red-100 p-3 text-sm text-red-900">

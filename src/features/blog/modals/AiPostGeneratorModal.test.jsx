@@ -72,6 +72,9 @@ describe('AiPostGeneratorModal', () => {
     render(<AiPostGeneratorModal onClose={onClose2} onApply={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: 'Batal' }))
     expect(onClose2).toHaveBeenCalledTimes(1)
+    await userEvent.keyboard('x')
+    await userEvent.keyboard('{Escape}')
+    expect(onClose2).toHaveBeenCalledTimes(2)
   })
 
   it('mengabaikan hasil setelah unmount', async () => {

@@ -33,7 +33,7 @@ export default function AiPostGeneratorModal({ onClose, onApply }) {
     setError('')
     setLoading(true)
     try {
-      setDraft(await generateDraft({ topic: topic.trim(), category, include_web_search: withSearch }))
+      setDraft(await generateDraft({ topic: topic.trim(), category, use_search: withSearch }))
     } catch (err) {
       setError(err.message)
     }
@@ -48,17 +48,25 @@ export default function AiPostGeneratorModal({ onClose, onApply }) {
         aria-labelledby="ai-modal-title"
         className="flex max-h-[96vh] w-full max-w-[96vw] flex-col overflow-hidden rounded-xl bg-white dark:bg-slate-800"
       >
-        <header className="bg-violet-800 px-6 py-4 text-white">
+        <header className="flex items-center justify-between bg-violet-800 px-6 py-4 text-white">
           <h2 id="ai-modal-title" className="m-0 text-xl font-semibold">
             AI Blog Generator
           </h2>
+          <button
+            type="button"
+            aria-label="Tutup dialog"
+            onClick={onClose}
+            className="text-2xl leading-none text-white hover:text-slate-200"
+          >
+            ×
+          </button>
         </header>
         <form onSubmit={handleGenerate} noValidate className="flex min-h-0 flex-1 flex-col">
         <div className="flex-1 space-y-4 overflow-y-auto p-6">
           <div className="space-y-4">
             <div>
               <label htmlFor="ai-topic" className={labelClass}>
-                Topik artikel
+                Topik Artikel
               </label>
               <input id="ai-topic" value={topic} onChange={onTopic} className={inputClass} />
             </div>
@@ -76,7 +84,7 @@ export default function AiPostGeneratorModal({ onClose, onApply }) {
             </div>
             <label className="flex items-center gap-2 text-sm text-slate-800 dark:text-slate-200">
               <input type="checkbox" checked={withSearch} onChange={(e) => setWithSearch(e.target.checked)} />
-              Sertakan penelusuran search engine
+              Gunakan Search Engine
             </label>
           </div>
           {error && (
@@ -84,15 +92,15 @@ export default function AiPostGeneratorModal({ onClose, onApply }) {
               {error}
             </p>
           )}
-          {loading && <p role="status">Membuat draf artikel…</p>}
+          {(loading || draft) && <p role="status">Sedang membuat draf…</p>}
           {draft && (
             <section aria-label="Pratinjau draf" className="space-y-3">
-              <h3 className="m-0 text-lg font-semibold text-slate-900 dark:text-white">{draft.title}</h3>
+              <h2 className="m-0 text-lg font-semibold text-slate-900 dark:text-white">{draft.title}</h2>
               <p className="m-0 text-sm text-slate-700 dark:text-slate-300">{draft.excerpt}</p>
               <MarkdownViewer content={draft.content} />
               {draft.sources && draft.sources.length > 0 && (
                 <div>
-                  <h4 className="mb-1 mt-0 font-semibold text-slate-900 dark:text-white">Sumber rujukan</h4>
+                  <h4 className="mb-1 mt-0 font-semibold text-slate-900 dark:text-white">Sumber Referensi</h4>
                   <ul className="m-0 list-disc pl-5">
                     {draft.sources.map((source) => (
                       <li key={source.url}>
