@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url' // BARU
+import { parse as babelParse } from '@babel/parser'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -21,8 +22,37 @@ function inlineMainCss() {
   }
 }
 
+// Cadangan untuk lingkungan Alpine (musl): parser native rollup bisa gagal dengan
+// "Code is nested too deeply" sehingga vi.mock tidak di-hoist. Bila parse bawaan
+// gagal, pakai @babel/parser (sudah terpasang lewat @vitejs/plugin-react).
+function parseFallbackForMocks() {
+  const toProgram = (code) =>
+    babelParse(code, { sourceType: 'module', plugins: ['estree', 'jsx'] }).program
+  return {
+    name: 'parse-fallback-for-mocks',
+    configResolved(config) {
+      for (const plugin of config.plugins) {
+        if (plugin.name !== 'vitest:mocks' || typeof plugin.transform !== 'function') continue
+        const original = plugin.transform
+        plugin.transform = function (code, id, options) {
+          const nativeParse = this.parse
+          const ctx = Object.create(this)
+          ctx.parse = (source, opts) => {
+            try {
+              return nativeParse.call(this, source, opts)
+            } catch {
+              return toProgram(source)
+            }
+          }
+          return original.call(ctx, code, id, options)
+        }
+      }
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), inlineMainCss()],
+  plugins: [react(), tailwindcss(), inlineMainCss(), parseFallbackForMocks()],
   server: {
     port: 5174,
     proxy: {
