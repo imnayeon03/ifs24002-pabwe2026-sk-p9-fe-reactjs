@@ -33,7 +33,7 @@ pipeline {
         stage('Install Dependencies') {
             agent {
                 docker {
-                    image 'node:24-alpine'
+                    image 'node:24-slim'
                     reuseNode true
                     args '''
                         -e HOME=/tmp
@@ -68,7 +68,7 @@ pipeline {
         stage('Test') {
             agent {
                 docker {
-                    image 'node:24-alpine'
+                    image 'node:24-slim'
                     reuseNode true
                     args '''
                         -e HOME=/tmp
@@ -104,7 +104,7 @@ pipeline {
         stage('Build Application') {
             agent {
                 docker {
-                    image 'node:24-alpine'
+                    image 'node:24-slim'
                     reuseNode true
                     args '''
                         -e HOME=/tmp

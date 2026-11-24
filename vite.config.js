@@ -43,6 +43,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    pool: 'forks',
     setupFiles: [fileURLToPath(new URL('./src/setupTests.js', import.meta.url))], // DIUBAH
     coverage: {
       provider: 'v8',
